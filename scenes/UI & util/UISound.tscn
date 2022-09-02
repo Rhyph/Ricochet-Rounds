@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=2]
+
+[ext_resource path="res://sounds/Slide_Sharp_00.wav" type="AudioStream" id=1]
+
+[node name="UISound" type="AudioStreamPlayer"]
+pause_mode = 2
+stream = ExtResource( 1 )
+volume_db = -10.0
+autoplay = true
+bus = "FX"

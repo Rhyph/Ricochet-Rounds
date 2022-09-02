@@ -1,0 +1,44 @@
+[gd_scene load_steps=6 format=2]
+
+[ext_resource path="res://sprites/redWall.png" type="Texture" id=1]
+[ext_resource path="res://scriptes/redWall.gd" type="Script" id=2]
+[ext_resource path="res://sounds/error.wav" type="AudioStream" id=3]
+
+[sub_resource type="RectangleShape2D" id=1]
+extents = Vector2( 16, 2 )
+
+[sub_resource type="ParticlesMaterial" id=2]
+flag_disable_z = true
+gravity = Vector3( 98, 0, 0 )
+orbit_velocity = 0.0
+orbit_velocity_random = 0.0
+linear_accel = -40.0
+hue_variation = 1.0
+hue_variation_random = 1.0
+
+[node name="redWall" type="Area2D"]
+collision_layer = 0
+collision_mask = 2
+script = ExtResource( 2 )
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource( 1 )
+
+[node name="Particles2D" type="Particles2D" parent="."]
+position = Vector2( -15, 0 )
+amount = 4
+process_material = SubResource( 2 )
+texture = ExtResource( 1 )
+
+[node name="Particles2D2" type="Particles2D" parent="."]
+position = Vector2( 15, 0 )
+rotation = 3.14159
+process_material = SubResource( 2 )
+texture = ExtResource( 1 )
+
+[node name="AudioStreamPlayer" type="AudioStreamPlayer" parent="."]
+stream = ExtResource( 3 )
+volume_db = -10.0
+bus = "FX"
+
+[connection signal="body_entered" from="." to="." method="_on_Area2D_body_entered"]

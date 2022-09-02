@@ -1,0 +1,91 @@
+[gd_scene load_steps=6 format=2]
+
+[ext_resource path="res://sprites/return.png" type="Texture" id=1]
+
+[sub_resource type="GDScript" id=17]
+script/source = "extends CanvasLayer
+
+
+func disable():
+	$Button.disabled = true
+
+
+func _on_Button_pressed():
+	$\"/root/World/Player\".velocity = Vector2.ZERO
+	$\"/root/World/Player\".global_position = Vector2(144, 112) 
+
+
+func _on_Button_mouse_entered():
+	G.notPause = false
+
+func _on_Button_mouse_exited():
+	G.notPause = true
+"
+
+[sub_resource type="StyleBoxFlat" id=14]
+bg_color = Color( 0, 0, 0, 1 )
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color( 0.607843, 0.607843, 0.607843, 1 )
+
+[sub_resource type="StyleBoxFlat" id=15]
+bg_color = Color( 0, 0, 0, 1 )
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color( 0.392157, 0.392157, 0.392157, 1 )
+
+[sub_resource type="StyleBoxFlat" id=16]
+bg_color = Color( 0, 0, 0, 1 )
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color( 1, 1, 1, 1 )
+
+[node name="CanvasLayerReturn" type="CanvasLayer"]
+script = SubResource( 17 )
+
+[node name="Button" type="Button" parent="."]
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+margin_left = -9.0
+margin_top = -18.0
+margin_right = 9.0
+focus_mode = 0
+custom_colors/font_color = Color( 1, 1, 1, 1 )
+custom_colors/font_color_hover = Color( 0.607843, 0.607843, 0.607843, 1 )
+custom_colors/font_color_pressed = Color( 0.392157, 0.392157, 0.392157, 1 )
+custom_styles/hover = SubResource( 14 )
+custom_styles/pressed = SubResource( 15 )
+custom_styles/disabled = SubResource( 15 )
+custom_styles/normal = SubResource( 16 )
+enabled_focus_mode = 0
+icon = ExtResource( 1 )
+__meta__ = {
+"_edit_use_anchors_": false,
+"_editor_description_": ""
+}
+
+[node name="Label" type="Label" parent="."]
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+margin_left = -91.0
+margin_top = -14.0
+margin_right = 93.0
+margin_bottom = -1.0
+text = "return position     to shoot"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[connection signal="mouse_entered" from="Button" to="." method="_on_Button_mouse_entered"]
+[connection signal="mouse_exited" from="Button" to="." method="_on_Button_mouse_exited"]
+[connection signal="pressed" from="Button" to="." method="_on_Button_pressed"]

@@ -1,0 +1,1350 @@
+[gd_scene load_steps=44 format=2]
+
+[ext_resource path="res://scriptes/Sky.gd" type="Script" id=1]
+[ext_resource path="res://sounds/Hit_Hurt10.wav" type="AudioStream" id=2]
+[ext_resource path="res://sprites/Textures/textureLong.png" type="Texture" id=3]
+[ext_resource path="res://scenes/Platforms/Wall.tscn" type="PackedScene" id=4]
+[ext_resource path="res://scenes/Player.tscn" type="PackedScene" id=5]
+[ext_resource path="res://scenes/Levels/Level8.tscn" type="PackedScene" id=6]
+[ext_resource path="res://scenes/Levels/Level2.tscn" type="PackedScene" id=7]
+[ext_resource path="res://scenes/Levels/Level1.tscn" type="PackedScene" id=8]
+[ext_resource path="res://scenes/Levels/Level3.tscn" type="PackedScene" id=9]
+[ext_resource path="res://scenes/Levels/Level7.tscn" type="PackedScene" id=10]
+[ext_resource path="res://scenes/Levels/Level5.tscn" type="PackedScene" id=11]
+[ext_resource path="res://scenes/Platforms/redWall.tscn" type="PackedScene" id=12]
+[ext_resource path="res://scenes/Teleport.tscn" type="PackedScene" id=13]
+[ext_resource path="res://scenes/Levels/Level6.tscn" type="PackedScene" id=14]
+[ext_resource path="res://scenes/Levels/Level4.tscn" type="PackedScene" id=15]
+[ext_resource path="res://scenes/UI & util/UI.tscn" type="PackedScene" id=16]
+[ext_resource path="res://sprites/move.png" type="Texture" id=17]
+[ext_resource path="res://sprites/lmb.png" type="Texture" id=18]
+[ext_resource path="res://scenes/Levels/Level9.tscn" type="PackedScene" id=19]
+[ext_resource path="res://scenes/Levels/Level10.tscn" type="PackedScene" id=20]
+
+[sub_resource type="GDScript" id=19]
+script/source = "extends Node2D
+
+
+var shots = 0
+
+var hub = true
+
+
+func _ready():
+	$\"/root/World/Player\".cameraOffsetY = 0
+"
+
+[sub_resource type="Shader" id=1]
+code = "shader_type canvas_item;
+
+uniform int octaves = 5;
+uniform vec2 viewport_size = vec2(280.0, 180.0);
+uniform float x_offset = 0.;
+uniform float y_offset = 0.;
+
+varying vec2 vtx;
+
+vec3 mod289(vec3 x)
+{
+	return x - floor(x * (1.0 / 289.0)) * 289.0;
+}
+
+vec2 mod289_2(vec2 x) 
+{
+	return x - floor(x * (1.0 / 289.0)) * 289.0;
+}
+
+vec3 permute(vec3 x) 
+{
+	return mod289(((x*34.0)+1.0)*x);
+}
+
+// Simplex noise 
+// https://github.com/ashima/webgl-noise 
+// Copyright (C) 2011 Ashima Arts. All rights reserved.
+float snoise(vec2 v)
+{
+	const vec4 C = vec4(0.211324865405187,  // (3.0-sqrt(3.0))/6.0
+	                    0.366025403784439,  // 0.5*(sqrt(3.0)-1.0)
+	                    -0.577350269189626,  // -1.0 + 2.0 * C.x
+	                    0.024390243902439); // 1.0 / 41.0
+// First corner
+	vec2 i  = floor(v + dot(v, C.yy) );
+	vec2 x0 = v -   i + dot(i, C.xx);
+
+// Other corners
+	vec2 i1;
+	//i1.x = step( x0.y, x0.x ); // x0.x > x0.y ? 1.0 : 0.0
+	//i1.y = 1.0 - i1.x;
+	i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+	// x0 = x0 - 0.0 + 0.0 * C.xx ;
+	// x1 = x0 - i1 + 1.0 * C.xx ;
+	// x2 = x0 - 1.0 + 2.0 * C.xx ;
+	vec4 x12 = x0.xyxy + C.xxzz;
+	x12.xy -= i1;
+
+// Permutations
+	i = mod289_2(i); // Avoid truncation effects in permutation
+	vec3 p = permute( permute( i.y + vec3(0.0, i1.y, 1.0 ))
+		+ i.x + vec3(0.0, i1.x, 1.0 ));
+
+	vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy), dot(x12.zw,x12.zw)), 0.0);
+	m = m*m ;
+	m = m*m ;
+
+// Gradients: 41 points uniformly over a line, mapped onto a diamond.
+// The ring size 17*17 = 289 is close to a multiple of 41 (41*7 = 287)
+	
+	vec3 x = 2.0 * fract(p * C.www) - 1.0;
+	vec3 h = abs(x) - 0.5;
+	vec3 ox = floor(x + 0.5);
+	vec3 a0 = x - ox;
+	
+	// Normalise gradients implicitly by scaling m
+	// Approximation of: m *= inversesqrt( a0*a0 + h*h );
+	m *= 1.79284291400159 - 0.85373472095314 * ( a0*a0 + h*h );
+	
+	// Compute final noise value at P
+	vec3 g;
+	g.x  = a0.x  * x0.x  + h.x  * x0.y;
+	g.yz = a0.yz * x12.xz + h.yz * x12.yw;
+	return 130.0 * dot(m, g);
+}
+
+vec2 rand2(vec2 p)
+{
+	p = vec2(dot(p, vec2(12.9898,78.233)), dot(p, vec2(26.65125, 83.054543))); 
+	return fract(sin(p) * 43758.5453);
+}
+
+float rand(vec2 p)
+{
+	return fract(sin(dot(p.xy ,vec2(54.90898,18.233))) * 4337.5453);
+}
+
+vec3 hsv2rgb(vec3 c)
+{
+	vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+	vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+	return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+}
+
+// Thanks to David Hoskins https://www.shadertoy.com/view/4djGRh
+float stars(in vec2 x, float numCells, float size, float br)
+{
+	vec2 n = x * numCells;
+	vec2 f = floor(n);
+
+	float d = 1.0e10;
+	for (int i = -1; i <= 1; ++i)
+	{
+		for (int j = -1; j <= 1; ++j)
+		{
+			vec2 g = f + vec2(float(i), float(j));
+			g = n - g - rand2(mod(g, numCells)) + rand(g);
+			// Control size
+			g *= 1. / (numCells * size);
+			d = min(d, dot(g, g));
+		}
+	}
+
+	return br * (smoothstep(.95, 1., (1. - sqrt(d))));
+}
+
+// Simple fractal noise
+// persistence - A multiplier that determines how quickly the amplitudes diminish for 
+// each successive octave.
+// lacunarity - A multiplier that determines how quickly the frequency increases for 
+// each successive octave.
+float fractalNoise(in vec2 coord, in float persistence, in float lacunarity)
+{    
+	float n = 0.;
+	float frequency = 1.;
+	float amplitude = 1.;
+	for (int o = 0; o < octaves; ++o)
+	{
+	    n += amplitude * snoise(coord * frequency);
+	    amplitude *= persistence;
+	    frequency *= lacunarity;
+	}
+	return n;
+}
+
+vec3 fractalNebula(in vec2 coord, vec3 color, float transparency)
+{
+	float n = fractalNoise(coord, .5, 2.);
+	return n * color * transparency;
+}
+
+vec4 mainImage(vec2 fragCoord)
+{
+	float resolution = max(viewport_size.x, viewport_size.y);
+	
+	vec2 coord = fragCoord.xy / resolution;
+	
+	vec3 result = vec3(0.);
+	vec3 nebulaColor1 = hsv2rgb(vec3(.5, 0.5, .25));
+	vec3 nebulaColor2 = hsv2rgb(vec3(.7, 1., .25));
+
+	result += fractalNebula(coord + vec2(.1, .1), nebulaColor1, 1.);
+	result += fractalNebula(coord + vec2(0., .2), nebulaColor2, .5);
+	result += stars(coord, 4., 0.06, 0.6) * vec3(.9, .9, .95);
+	
+	return vec4(result, 1.);
+}
+
+void vertex()
+{
+	vtx = VERTEX + vec2(x_offset, y_offset);
+}
+
+void fragment()
+{
+	COLOR = mainImage(vtx);
+}"
+
+[sub_resource type="ShaderMaterial" id=2]
+shader = SubResource( 1 )
+shader_param/octaves = 5
+shader_param/viewport_size = Vector2( 320, 180 )
+shader_param/x_offset = 0.0
+shader_param/y_offset = 0.0
+
+[sub_resource type="GDScript" id=6]
+script/source = "extends StaticBody2D
+
+
+func _physics_process(_delta):
+	if G.coins >= 1:
+		queue_free()
+
+func hit():
+	$AnimationPlayer.play(\"flash\")
+	$AudioStreamPlayer.play()
+"
+
+[sub_resource type="RectangleShape2D" id=3]
+extents = Vector2( 16, 2 )
+
+[sub_resource type="CanvasItemMaterial" id=4]
+
+[sub_resource type="Animation" id=5]
+resource_name = "flash"
+length = 0.3
+tracks/0/type = "value"
+tracks/0/path = NodePath("Polygon2D:color")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/keys = {
+"times": PoolRealArray( 0, 0.1, 0.2 ),
+"transitions": PoolRealArray( 1, 1, 1 ),
+"update": 0,
+"values": [ Color( 1, 1, 1, 1 ), Color( 0.372549, 0.803922, 0.894118, 1 ), Color( 1, 1, 1, 1 ) ]
+}
+
+[sub_resource type="GDScript" id=8]
+script/source = "extends StaticBody2D
+
+
+func _physics_process(_delta):
+	if G.coins >= 2:
+		queue_free()
+
+func hit():
+	$AnimationPlayer.play(\"flash\")
+	$AudioStreamPlayer.play()
+"
+
+[sub_resource type="Animation" id=7]
+resource_name = "flash"
+length = 0.3
+tracks/0/type = "value"
+tracks/0/path = NodePath("Polygon2D:color")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/keys = {
+"times": PoolRealArray( 0, 0.1, 0.2 ),
+"transitions": PoolRealArray( 1, 1, 1 ),
+"update": 0,
+"values": [ Color( 1, 1, 1, 1 ), Color( 0.372549, 0.803922, 0.894118, 1 ), Color( 1, 1, 1, 1 ) ]
+}
+
+[sub_resource type="GDScript" id=10]
+script/source = "extends StaticBody2D
+
+
+func _physics_process(_delta):
+	if G.coins >= 3:
+		queue_free()
+
+func hit():
+	$AnimationPlayer.play(\"flash\")
+	$AudioStreamPlayer.play()
+"
+
+[sub_resource type="Animation" id=9]
+resource_name = "flash"
+length = 0.3
+tracks/0/type = "value"
+tracks/0/path = NodePath("Polygon2D:color")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/keys = {
+"times": PoolRealArray( 0, 0.1, 0.2 ),
+"transitions": PoolRealArray( 1, 1, 1 ),
+"update": 0,
+"values": [ Color( 1, 1, 1, 1 ), Color( 0.372549, 0.803922, 0.894118, 1 ), Color( 1, 1, 1, 1 ) ]
+}
+
+[sub_resource type="GDScript" id=12]
+script/source = "extends StaticBody2D
+
+
+func _physics_process(_delta):
+	if G.coins >= 4:
+		queue_free()
+
+func hit():
+	$AnimationPlayer.play(\"flash\")
+	$AudioStreamPlayer.play()
+"
+
+[sub_resource type="Animation" id=11]
+resource_name = "flash"
+length = 0.3
+tracks/0/type = "value"
+tracks/0/path = NodePath("Polygon2D:color")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/keys = {
+"times": PoolRealArray( 0, 0.1, 0.2 ),
+"transitions": PoolRealArray( 1, 1, 1 ),
+"update": 0,
+"values": [ Color( 1, 1, 1, 1 ), Color( 0.372549, 0.803922, 0.894118, 1 ), Color( 1, 1, 1, 1 ) ]
+}
+
+[sub_resource type="GDScript" id=14]
+script/source = "extends StaticBody2D
+
+
+func _physics_process(_delta):
+	if G.coins >= 5:
+		queue_free()
+
+func hit():
+	$AnimationPlayer.play(\"flash\")
+	$AudioStreamPlayer.play()
+"
+
+[sub_resource type="Animation" id=13]
+resource_name = "flash"
+length = 0.3
+tracks/0/type = "value"
+tracks/0/path = NodePath("Polygon2D:color")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/keys = {
+"times": PoolRealArray( 0, 0.1, 0.2 ),
+"transitions": PoolRealArray( 1, 1, 1 ),
+"update": 0,
+"values": [ Color( 1, 1, 1, 1 ), Color( 0.372549, 0.803922, 0.894118, 1 ), Color( 1, 1, 1, 1 ) ]
+}
+
+[sub_resource type="GDScript" id=16]
+script/source = "extends StaticBody2D
+
+
+func _physics_process(_delta):
+	if G.coins >= 6:
+		queue_free()
+
+func hit():
+	$AnimationPlayer.play(\"flash\")
+	$AudioStreamPlayer.play()
+"
+
+[sub_resource type="Animation" id=15]
+resource_name = "flash"
+length = 0.3
+tracks/0/type = "value"
+tracks/0/path = NodePath("Polygon2D:color")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/keys = {
+"times": PoolRealArray( 0, 0.1, 0.2 ),
+"transitions": PoolRealArray( 1, 1, 1 ),
+"update": 0,
+"values": [ Color( 1, 1, 1, 1 ), Color( 0.372549, 0.803922, 0.894118, 1 ), Color( 1, 1, 1, 1 ) ]
+}
+
+[sub_resource type="GDScript" id=18]
+script/source = "extends StaticBody2D
+
+
+func _physics_process(_delta):
+	if G.coins >= 7:
+		queue_free()
+
+func hit():
+	$AnimationPlayer.play(\"flash\")
+	$AudioStreamPlayer.play()
+"
+
+[sub_resource type="Animation" id=17]
+resource_name = "flash"
+length = 0.3
+tracks/0/type = "value"
+tracks/0/path = NodePath("Polygon2D:color")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/keys = {
+"times": PoolRealArray( 0, 0.1, 0.2 ),
+"transitions": PoolRealArray( 1, 1, 1 ),
+"update": 0,
+"values": [ Color( 1, 1, 1, 1 ), Color( 0.372549, 0.803922, 0.894118, 1 ), Color( 1, 1, 1, 1 ) ]
+}
+
+[sub_resource type="GDScript" id=22]
+script/source = "extends StaticBody2D
+
+
+func _physics_process(_delta):
+	if G.coins >= 8:
+		queue_free()
+
+func hit():
+	$AnimationPlayer.play(\"flash\")
+	$AudioStreamPlayer.play()
+"
+
+[sub_resource type="Animation" id=20]
+resource_name = "flash"
+length = 0.3
+tracks/0/type = "value"
+tracks/0/path = NodePath("Polygon2D:color")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/keys = {
+"times": PoolRealArray( 0, 0.1, 0.2 ),
+"transitions": PoolRealArray( 1, 1, 1 ),
+"update": 0,
+"values": [ Color( 1, 1, 1, 1 ), Color( 0.372549, 0.803922, 0.894118, 1 ), Color( 1, 1, 1, 1 ) ]
+}
+
+[sub_resource type="GDScript" id=23]
+script/source = "extends StaticBody2D
+
+
+func _physics_process(_delta):
+	if G.coins >= 9:
+		queue_free()
+
+func hit():
+	$AnimationPlayer.play(\"flash\")
+	$AudioStreamPlayer.play()
+"
+
+[sub_resource type="Animation" id=21]
+resource_name = "flash"
+length = 0.3
+tracks/0/type = "value"
+tracks/0/path = NodePath("Polygon2D:color")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/keys = {
+"times": PoolRealArray( 0, 0.1, 0.2 ),
+"transitions": PoolRealArray( 1, 1, 1 ),
+"update": 0,
+"values": [ Color( 1, 1, 1, 1 ), Color( 0.372549, 0.803922, 0.894118, 1 ), Color( 1, 1, 1, 1 ) ]
+}
+
+[node name="World" type="Node2D"]
+script = SubResource( 19 )
+
+[node name="Player" parent="." instance=ExtResource( 5 )]
+position = Vector2( 144, 73 )
+
+[node name="ParallaxBackground" type="ParallaxBackground" parent="."]
+
+[node name="Sky" type="ColorRect" parent="ParallaxBackground"]
+material = SubResource( 2 )
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource( 1 )
+__meta__ = {
+"_edit_lock_": true,
+"_edit_use_anchors_": false
+}
+
+[node name="UI" parent="." instance=ExtResource( 16 )]
+
+[node name="Level1" type="Node2D" parent="."]
+position = Vector2( -16, -24 )
+
+[node name="ColorRect" type="ColorRect" parent="Level1"]
+self_modulate = Color( 1, 1, 1, 0.752941 )
+margin_left = 28.0
+margin_top = 42.0
+margin_right = 69.0
+margin_bottom = 53.0
+color = Color( 0, 0, 0, 1 )
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Label" type="Label" parent="Level1/ColorRect"]
+margin_left = 2.0
+margin_top = -2.0
+margin_right = 40.0
+margin_bottom = 11.0
+text = "Level 1"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Wall" parent="Level1" instance=ExtResource( 4 )]
+position = Vector2( 48, 2 )
+rotation = 3.14159
+
+[node name="Wall2" parent="Level1" instance=ExtResource( 4 )]
+position = Vector2( 30, 20 )
+rotation = 1.5708
+
+[node name="Wall3" parent="Level1" instance=ExtResource( 4 )]
+position = Vector2( 66, 20 )
+rotation = 4.71239
+
+[node name="redWall" parent="Level1" instance=ExtResource( 12 )]
+position = Vector2( 48, 38 )
+
+[node name="Teleport" parent="Level1" instance=ExtResource( 13 )]
+position = Vector2( 48, 20 )
+next_scene = ExtResource( 8 )
+
+[node name="Level2" type="Node2D" parent="."]
+position = Vector2( 40, -24 )
+
+[node name="Wall" parent="Level2" instance=ExtResource( 4 )]
+position = Vector2( 48, 2 )
+rotation = 3.14159
+
+[node name="Wall2" parent="Level2" instance=ExtResource( 4 )]
+position = Vector2( 30, 20 )
+rotation = 1.5708
+
+[node name="Wall3" parent="Level2" instance=ExtResource( 4 )]
+position = Vector2( 66, 20 )
+rotation = 4.71239
+
+[node name="redWall" parent="Level2" instance=ExtResource( 12 )]
+position = Vector2( 48, 38 )
+
+[node name="Teleport" parent="Level2" instance=ExtResource( 13 )]
+position = Vector2( 48, 21 )
+next_scene = ExtResource( 7 )
+
+[node name="WallCoin1" type="StaticBody2D" parent="Level2"]
+position = Vector2( 48, 38 )
+collision_mask = 3
+script = SubResource( 6 )
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Level2/WallCoin1"]
+shape = SubResource( 3 )
+
+[node name="Polygon2D" type="Polygon2D" parent="Level2/WallCoin1"]
+material = SubResource( 4 )
+position = Vector2( 0, 2 )
+texture = ExtResource( 3 )
+texture_offset = Vector2( 16, 0 )
+texture_rotation_degrees = 180.0
+polygon = PoolVector2Array( -16, 0, 16, 0, 16, -4, -16, -4 )
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="Level2/WallCoin1"]
+anims/flash = SubResource( 5 )
+
+[node name="AudioStreamPlayer" type="AudioStreamPlayer" parent="Level2/WallCoin1"]
+stream = ExtResource( 2 )
+volume_db = -20.0
+
+[node name="TextWallCoin1" type="Label" parent="Level2/WallCoin1"]
+margin_left = -20.0
+margin_top = -8.0
+margin_right = 20.0
+margin_bottom = 5.0
+custom_colors/font_color = Color( 1, 1, 1, 1 )
+text = "[1c]"
+align = 1
+__meta__ = {
+"_edit_lock_": true,
+"_edit_use_anchors_": false
+}
+
+[node name="ColorRect2" type="ColorRect" parent="Level2"]
+self_modulate = Color( 1, 1, 1, 0.752941 )
+margin_left = 28.0
+margin_top = 42.0
+margin_right = 69.0
+margin_bottom = 53.0
+color = Color( 0, 0, 0, 1 )
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Label" type="Label" parent="Level2/ColorRect2"]
+margin_left = 2.0
+margin_top = -2.0
+margin_right = 40.0
+margin_bottom = 11.0
+text = "Level 2"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Level3" type="Node2D" parent="."]
+position = Vector2( 96, -24 )
+
+[node name="Wall" parent="Level3" instance=ExtResource( 4 )]
+position = Vector2( 48, 2 )
+rotation = 3.14159
+
+[node name="Wall2" parent="Level3" instance=ExtResource( 4 )]
+position = Vector2( 30, 20 )
+rotation = 1.5708
+
+[node name="Wall3" parent="Level3" instance=ExtResource( 4 )]
+position = Vector2( 66, 20 )
+rotation = 4.71239
+
+[node name="redWall" parent="Level3" instance=ExtResource( 12 )]
+position = Vector2( 48, 38 )
+
+[node name="Teleport" parent="Level3" instance=ExtResource( 13 )]
+position = Vector2( 48, 21 )
+next_scene = ExtResource( 9 )
+
+[node name="WallCoin1" type="StaticBody2D" parent="Level3"]
+position = Vector2( 48, 38 )
+collision_mask = 3
+script = SubResource( 8 )
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Level3/WallCoin1"]
+shape = SubResource( 3 )
+
+[node name="Polygon2D" type="Polygon2D" parent="Level3/WallCoin1"]
+material = SubResource( 4 )
+position = Vector2( 0, 2 )
+texture = ExtResource( 3 )
+texture_offset = Vector2( 16, 0 )
+texture_rotation_degrees = 180.0
+polygon = PoolVector2Array( -16, 0, 16, 0, 16, -4, -16, -4 )
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="Level3/WallCoin1"]
+anims/flash = SubResource( 7 )
+
+[node name="AudioStreamPlayer" type="AudioStreamPlayer" parent="Level3/WallCoin1"]
+stream = ExtResource( 2 )
+volume_db = -20.0
+
+[node name="TextWallCoin1" type="Label" parent="Level3/WallCoin1"]
+margin_left = -20.0
+margin_top = -8.0
+margin_right = 20.0
+margin_bottom = 5.0
+custom_colors/font_color = Color( 1, 1, 1, 1 )
+text = "[2c]"
+align = 1
+__meta__ = {
+"_edit_lock_": true,
+"_edit_use_anchors_": false
+}
+
+[node name="ColorRect3" type="ColorRect" parent="Level3"]
+self_modulate = Color( 1, 1, 1, 0.752941 )
+margin_left = 28.0
+margin_top = 42.0
+margin_right = 69.0
+margin_bottom = 53.0
+color = Color( 0, 0, 0, 1 )
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Label" type="Label" parent="Level3/ColorRect3"]
+margin_left = 2.0
+margin_top = -2.0
+margin_right = 40.0
+margin_bottom = 11.0
+text = "Level 3"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Level4" type="Node2D" parent="."]
+position = Vector2( 152, -24 )
+
+[node name="Wall" parent="Level4" instance=ExtResource( 4 )]
+position = Vector2( 48, 2 )
+rotation = 3.14159
+
+[node name="Wall2" parent="Level4" instance=ExtResource( 4 )]
+position = Vector2( 30, 20 )
+rotation = 1.5708
+
+[node name="Wall3" parent="Level4" instance=ExtResource( 4 )]
+position = Vector2( 66, 20 )
+rotation = 4.71239
+
+[node name="redWall" parent="Level4" instance=ExtResource( 12 )]
+position = Vector2( 48, 38 )
+
+[node name="Teleport" parent="Level4" instance=ExtResource( 13 )]
+position = Vector2( 48, 21 )
+next_scene = ExtResource( 15 )
+
+[node name="WallCoin1" type="StaticBody2D" parent="Level4"]
+position = Vector2( 48, 38 )
+collision_mask = 3
+script = SubResource( 10 )
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Level4/WallCoin1"]
+shape = SubResource( 3 )
+
+[node name="Polygon2D" type="Polygon2D" parent="Level4/WallCoin1"]
+material = SubResource( 4 )
+position = Vector2( 0, 2 )
+texture = ExtResource( 3 )
+texture_offset = Vector2( 16, 0 )
+texture_rotation_degrees = 180.0
+polygon = PoolVector2Array( -16, 0, 16, 0, 16, -4, -16, -4 )
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="Level4/WallCoin1"]
+anims/flash = SubResource( 9 )
+
+[node name="AudioStreamPlayer" type="AudioStreamPlayer" parent="Level4/WallCoin1"]
+stream = ExtResource( 2 )
+volume_db = -20.0
+
+[node name="TextWallCoin1" type="Label" parent="Level4/WallCoin1"]
+margin_left = -20.0
+margin_top = -8.0
+margin_right = 20.0
+margin_bottom = 5.0
+custom_colors/font_color = Color( 1, 1, 1, 1 )
+text = "[3c]"
+align = 1
+__meta__ = {
+"_edit_lock_": true,
+"_edit_use_anchors_": false
+}
+
+[node name="ColorRect4" type="ColorRect" parent="Level4"]
+self_modulate = Color( 1, 1, 1, 0.752941 )
+margin_left = 28.0
+margin_top = 42.0
+margin_right = 69.0
+margin_bottom = 53.0
+color = Color( 0, 0, 0, 1 )
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Label" type="Label" parent="Level4/ColorRect4"]
+margin_left = 2.0
+margin_top = -2.0
+margin_right = 40.0
+margin_bottom = 11.0
+text = "Level 4"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Level5" type="Node2D" parent="."]
+position = Vector2( 208, -24 )
+
+[node name="Wall" parent="Level5" instance=ExtResource( 4 )]
+position = Vector2( 48, 2 )
+rotation = 3.14159
+
+[node name="Wall2" parent="Level5" instance=ExtResource( 4 )]
+position = Vector2( 30, 20 )
+rotation = 1.5708
+
+[node name="Wall3" parent="Level5" instance=ExtResource( 4 )]
+position = Vector2( 66, 20 )
+rotation = 4.71239
+
+[node name="redWall" parent="Level5" instance=ExtResource( 12 )]
+position = Vector2( 48, 38 )
+
+[node name="Teleport" parent="Level5" instance=ExtResource( 13 )]
+position = Vector2( 48, 21 )
+next_scene = ExtResource( 11 )
+
+[node name="WallCoin1" type="StaticBody2D" parent="Level5"]
+position = Vector2( 48, 38 )
+collision_mask = 3
+script = SubResource( 12 )
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Level5/WallCoin1"]
+shape = SubResource( 3 )
+
+[node name="Polygon2D" type="Polygon2D" parent="Level5/WallCoin1"]
+material = SubResource( 4 )
+position = Vector2( 0, 2 )
+texture = ExtResource( 3 )
+texture_offset = Vector2( 16, 0 )
+texture_rotation_degrees = 180.0
+polygon = PoolVector2Array( -16, 0, 16, 0, 16, -4, -16, -4 )
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="Level5/WallCoin1"]
+anims/flash = SubResource( 11 )
+
+[node name="AudioStreamPlayer" type="AudioStreamPlayer" parent="Level5/WallCoin1"]
+stream = ExtResource( 2 )
+volume_db = -20.0
+
+[node name="TextWallCoin1" type="Label" parent="Level5/WallCoin1"]
+margin_left = -20.0
+margin_top = -8.0
+margin_right = 20.0
+margin_bottom = 5.0
+custom_colors/font_color = Color( 1, 1, 1, 1 )
+text = "[4c]"
+align = 1
+__meta__ = {
+"_edit_lock_": true,
+"_edit_use_anchors_": false
+}
+
+[node name="ColorRect5" type="ColorRect" parent="Level5"]
+self_modulate = Color( 1, 1, 1, 0.752941 )
+margin_left = 28.0
+margin_top = 42.0
+margin_right = 69.0
+margin_bottom = 53.0
+color = Color( 0, 0, 0, 1 )
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Label" type="Label" parent="Level5/ColorRect5"]
+margin_left = 2.0
+margin_top = -2.0
+margin_right = 40.0
+margin_bottom = 11.0
+text = "Level 5"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Level6" type="Node2D" parent="."]
+position = Vector2( -16, 128 )
+
+[node name="Wall" parent="Level6" instance=ExtResource( 4 )]
+position = Vector2( 48, 38 )
+
+[node name="Wall2" parent="Level6" instance=ExtResource( 4 )]
+position = Vector2( 30, 20 )
+rotation = 1.5708
+
+[node name="Wall3" parent="Level6" instance=ExtResource( 4 )]
+position = Vector2( 66, 20 )
+rotation = 4.71239
+
+[node name="redWall" parent="Level6" instance=ExtResource( 12 )]
+position = Vector2( 48, 2 )
+
+[node name="Teleport" parent="Level6" instance=ExtResource( 13 )]
+position = Vector2( 48, 21 )
+next_scene = ExtResource( 14 )
+
+[node name="WallCoin1" type="StaticBody2D" parent="Level6"]
+position = Vector2( 48, 2 )
+collision_mask = 3
+script = SubResource( 14 )
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Level6/WallCoin1"]
+shape = SubResource( 3 )
+
+[node name="Polygon2D" type="Polygon2D" parent="Level6/WallCoin1"]
+material = SubResource( 4 )
+position = Vector2( 0, 2 )
+texture = ExtResource( 3 )
+texture_offset = Vector2( 16, 0 )
+texture_rotation_degrees = 180.0
+polygon = PoolVector2Array( -16, 0, 16, 0, 16, -4, -16, -4 )
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="Level6/WallCoin1"]
+anims/flash = SubResource( 13 )
+
+[node name="AudioStreamPlayer" type="AudioStreamPlayer" parent="Level6/WallCoin1"]
+stream = ExtResource( 2 )
+volume_db = -20.0
+
+[node name="TextWallCoin1" type="Label" parent="Level6/WallCoin1"]
+margin_left = -20.0
+margin_top = -8.0
+margin_right = 20.0
+margin_bottom = 5.0
+custom_colors/font_color = Color( 1, 1, 1, 1 )
+text = "[5c]"
+align = 1
+__meta__ = {
+"_edit_lock_": true,
+"_edit_use_anchors_": false
+}
+
+[node name="ColorRect6" type="ColorRect" parent="Level6"]
+self_modulate = Color( 1, 1, 1, 0.752941 )
+margin_left = 28.0
+margin_top = -13.0
+margin_right = 69.0
+margin_bottom = -2.0
+color = Color( 0, 0, 0, 1 )
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Label" type="Label" parent="Level6/ColorRect6"]
+margin_left = 2.0
+margin_top = -2.0
+margin_right = 40.0
+margin_bottom = 11.0
+text = "Level 6"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Level7" type="Node2D" parent="."]
+position = Vector2( 40, 128 )
+
+[node name="Wall" parent="Level7" instance=ExtResource( 4 )]
+position = Vector2( 48, 38 )
+
+[node name="Wall2" parent="Level7" instance=ExtResource( 4 )]
+position = Vector2( 30, 20 )
+rotation = 1.5708
+
+[node name="Wall3" parent="Level7" instance=ExtResource( 4 )]
+position = Vector2( 66, 20 )
+rotation = 4.71239
+
+[node name="redWall" parent="Level7" instance=ExtResource( 12 )]
+position = Vector2( 48, 2 )
+
+[node name="Teleport" parent="Level7" instance=ExtResource( 13 )]
+position = Vector2( 48, 21 )
+next_scene = ExtResource( 10 )
+
+[node name="WallCoin1" type="StaticBody2D" parent="Level7"]
+position = Vector2( 48, 2 )
+collision_mask = 3
+script = SubResource( 16 )
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Level7/WallCoin1"]
+shape = SubResource( 3 )
+
+[node name="Polygon2D" type="Polygon2D" parent="Level7/WallCoin1"]
+material = SubResource( 4 )
+position = Vector2( 0, 2 )
+texture = ExtResource( 3 )
+texture_offset = Vector2( 16, 0 )
+texture_rotation_degrees = 180.0
+polygon = PoolVector2Array( -16, 0, 16, 0, 16, -4, -16, -4 )
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="Level7/WallCoin1"]
+anims/flash = SubResource( 15 )
+
+[node name="AudioStreamPlayer" type="AudioStreamPlayer" parent="Level7/WallCoin1"]
+stream = ExtResource( 2 )
+volume_db = -20.0
+
+[node name="TextWallCoin1" type="Label" parent="Level7/WallCoin1"]
+margin_left = -20.0
+margin_top = -8.0
+margin_right = 20.0
+margin_bottom = 5.0
+custom_colors/font_color = Color( 1, 1, 1, 1 )
+text = "[6c]"
+align = 1
+__meta__ = {
+"_edit_lock_": true,
+"_edit_use_anchors_": false
+}
+
+[node name="ColorRect7" type="ColorRect" parent="Level7"]
+self_modulate = Color( 1, 1, 1, 0.752941 )
+margin_left = 28.0
+margin_top = -13.0
+margin_right = 69.0
+margin_bottom = -2.0
+color = Color( 0, 0, 0, 1 )
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Label" type="Label" parent="Level7/ColorRect7"]
+margin_left = 2.0
+margin_top = -2.0
+margin_right = 40.0
+margin_bottom = 11.0
+text = "Level 7"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Level8" type="Node2D" parent="."]
+position = Vector2( 96, 128 )
+
+[node name="Wall" parent="Level8" instance=ExtResource( 4 )]
+position = Vector2( 48, 38 )
+
+[node name="Wall2" parent="Level8" instance=ExtResource( 4 )]
+position = Vector2( 30, 20 )
+rotation = 1.5708
+
+[node name="Wall3" parent="Level8" instance=ExtResource( 4 )]
+position = Vector2( 66, 20 )
+rotation = 4.71239
+
+[node name="redWall" parent="Level8" instance=ExtResource( 12 )]
+position = Vector2( 48, 2 )
+
+[node name="Teleport" parent="Level8" instance=ExtResource( 13 )]
+position = Vector2( 48, 21 )
+next_scene = ExtResource( 6 )
+
+[node name="WallCoin1" type="StaticBody2D" parent="Level8"]
+position = Vector2( 48, 2 )
+collision_mask = 3
+script = SubResource( 18 )
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Level8/WallCoin1"]
+shape = SubResource( 3 )
+
+[node name="Polygon2D" type="Polygon2D" parent="Level8/WallCoin1"]
+material = SubResource( 4 )
+position = Vector2( 0, 2 )
+texture = ExtResource( 3 )
+texture_offset = Vector2( 16, 0 )
+texture_rotation_degrees = 180.0
+polygon = PoolVector2Array( -16, 0, 16, 0, 16, -4, -16, -4 )
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="Level8/WallCoin1"]
+anims/flash = SubResource( 17 )
+
+[node name="AudioStreamPlayer" type="AudioStreamPlayer" parent="Level8/WallCoin1"]
+stream = ExtResource( 2 )
+volume_db = -20.0
+
+[node name="TextWallCoin1" type="Label" parent="Level8/WallCoin1"]
+margin_left = -20.0
+margin_top = -8.0
+margin_right = 20.0
+margin_bottom = 5.0
+custom_colors/font_color = Color( 1, 1, 1, 1 )
+text = "[7c]"
+align = 1
+__meta__ = {
+"_edit_lock_": true,
+"_edit_use_anchors_": false
+}
+
+[node name="ColorRect8" type="ColorRect" parent="Level8"]
+self_modulate = Color( 1, 1, 1, 0.752941 )
+margin_left = 28.0
+margin_top = -13.0
+margin_right = 69.0
+margin_bottom = -2.0
+color = Color( 0, 0, 0, 1 )
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Label" type="Label" parent="Level8/ColorRect8"]
+margin_left = 2.0
+margin_top = -2.0
+margin_right = 40.0
+margin_bottom = 11.0
+text = "Level 8"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Level9" type="Node2D" parent="."]
+position = Vector2( 152, 128 )
+
+[node name="Wall" parent="Level9" instance=ExtResource( 4 )]
+position = Vector2( 48, 38 )
+
+[node name="Wall2" parent="Level9" instance=ExtResource( 4 )]
+position = Vector2( 30, 20 )
+rotation = 1.5708
+
+[node name="Wall3" parent="Level9" instance=ExtResource( 4 )]
+position = Vector2( 66, 20 )
+rotation = 4.71239
+
+[node name="redWall" parent="Level9" instance=ExtResource( 12 )]
+position = Vector2( 48, 2 )
+
+[node name="Teleport" parent="Level9" instance=ExtResource( 13 )]
+position = Vector2( 48, 21 )
+next_scene = ExtResource( 19 )
+
+[node name="WallCoin1" type="StaticBody2D" parent="Level9"]
+position = Vector2( 48, 2 )
+collision_mask = 3
+script = SubResource( 22 )
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Level9/WallCoin1"]
+shape = SubResource( 3 )
+
+[node name="Polygon2D" type="Polygon2D" parent="Level9/WallCoin1"]
+material = SubResource( 4 )
+position = Vector2( 0, 2 )
+texture = ExtResource( 3 )
+texture_offset = Vector2( 16, 0 )
+texture_rotation_degrees = 180.0
+polygon = PoolVector2Array( -16, 0, 16, 0, 16, -4, -16, -4 )
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="Level9/WallCoin1"]
+anims/flash = SubResource( 20 )
+
+[node name="AudioStreamPlayer" type="AudioStreamPlayer" parent="Level9/WallCoin1"]
+stream = ExtResource( 2 )
+volume_db = -20.0
+
+[node name="TextWallCoin1" type="Label" parent="Level9/WallCoin1"]
+margin_left = -20.0
+margin_top = -8.0
+margin_right = 20.0
+margin_bottom = 5.0
+custom_colors/font_color = Color( 1, 1, 1, 1 )
+text = "[8c]"
+align = 1
+__meta__ = {
+"_edit_lock_": true,
+"_edit_use_anchors_": false
+}
+
+[node name="ColorRect8" type="ColorRect" parent="Level9"]
+self_modulate = Color( 1, 1, 1, 0.752941 )
+margin_left = 28.0
+margin_top = -13.0
+margin_right = 69.0
+margin_bottom = -2.0
+color = Color( 0, 0, 0, 1 )
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Label" type="Label" parent="Level9/ColorRect8"]
+margin_left = 2.0
+margin_top = -2.0
+margin_right = 40.0
+margin_bottom = 11.0
+text = "Level 9"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Level10" type="Node2D" parent="."]
+position = Vector2( 208, 128 )
+
+[node name="Wall" parent="Level10" instance=ExtResource( 4 )]
+position = Vector2( 48, 38 )
+
+[node name="Wall2" parent="Level10" instance=ExtResource( 4 )]
+position = Vector2( 30, 20 )
+rotation = 1.5708
+
+[node name="Wall3" parent="Level10" instance=ExtResource( 4 )]
+position = Vector2( 66, 20 )
+rotation = 4.71239
+
+[node name="redWall" parent="Level10" instance=ExtResource( 12 )]
+position = Vector2( 48, 2 )
+
+[node name="Teleport" parent="Level10" instance=ExtResource( 13 )]
+position = Vector2( 48, 21 )
+next_scene = ExtResource( 20 )
+
+[node name="WallCoin1" type="StaticBody2D" parent="Level10"]
+position = Vector2( 48, 2 )
+collision_mask = 3
+script = SubResource( 23 )
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Level10/WallCoin1"]
+shape = SubResource( 3 )
+
+[node name="Polygon2D" type="Polygon2D" parent="Level10/WallCoin1"]
+material = SubResource( 4 )
+position = Vector2( 0, 2 )
+texture = ExtResource( 3 )
+texture_offset = Vector2( 16, 0 )
+texture_rotation_degrees = 180.0
+polygon = PoolVector2Array( -16, 0, 16, 0, 16, -4, -16, -4 )
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="Level10/WallCoin1"]
+anims/flash = SubResource( 21 )
+
+[node name="AudioStreamPlayer" type="AudioStreamPlayer" parent="Level10/WallCoin1"]
+stream = ExtResource( 2 )
+volume_db = -20.0
+
+[node name="TextWallCoin1" type="Label" parent="Level10/WallCoin1"]
+margin_left = -20.0
+margin_top = -8.0
+margin_right = 20.0
+margin_bottom = 5.0
+custom_colors/font_color = Color( 1, 1, 1, 1 )
+text = "[9c]"
+align = 1
+__meta__ = {
+"_edit_lock_": true,
+"_edit_use_anchors_": false
+}
+
+[node name="ColorRect8" type="ColorRect" parent="Level10"]
+self_modulate = Color( 1, 1, 1, 0.752941 )
+margin_left = 24.0
+margin_top = -13.0
+margin_right = 71.0
+margin_bottom = -2.0
+color = Color( 0, 0, 0, 1 )
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Label" type="Label" parent="Level10/ColorRect8"]
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+margin_left = -22.0
+margin_top = -7.5
+margin_right = 22.0
+margin_bottom = 5.5
+text = "Level 10"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="move" type="Node2D" parent="."]
+position = Vector2( -140, -24 )
+__meta__ = {
+"_edit_group_": true
+}
+
+[node name="Move" type="Sprite" parent="move"]
+position = Vector2( 234, 105 )
+texture = ExtResource( 17 )
+
+[node name="Label" type="Label" parent="move"]
+margin_left = 221.0
+margin_top = 81.0
+margin_right = 247.0
+margin_bottom = 94.0
+text = "Move"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Label2" type="Label" parent="move"]
+margin_left = 212.0
+margin_top = 92.0
+margin_right = 220.0
+margin_bottom = 105.0
+text = "W"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Label3" type="Label" parent="move"]
+margin_left = 202.0
+margin_top = 103.0
+margin_right = 208.0
+margin_bottom = 116.0
+text = "A"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Label4" type="Label" parent="move"]
+margin_left = 213.0
+margin_top = 103.0
+margin_right = 219.0
+margin_bottom = 116.0
+text = "S"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Label5" type="Label" parent="move"]
+margin_left = 224.0
+margin_top = 103.0
+margin_right = 230.0
+margin_bottom = 116.0
+text = "D"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Label6" type="Label" parent="move"]
+margin_left = 233.0
+margin_top = 103.0
+margin_right = 239.0
+margin_bottom = 116.0
+text = "/"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="shoot" type="Node2D" parent="."]
+position = Vector2( 23, -48 )
+__meta__ = {
+"_edit_group_": true
+}
+
+[node name="Label" type="Label" parent="shoot"]
+margin_left = 158.0
+margin_top = 105.0
+margin_right = 198.0
+margin_bottom = 118.0
+text = "Shoot"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Label2" type="Label" parent="shoot"]
+margin_left = 158.0
+margin_top = 119.0
+margin_right = 253.0
+margin_bottom = 132.0
+text = "lmb"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Lmb" type="Sprite" parent="shoot"]
+position = Vector2( 182, 127 )
+texture = ExtResource( 18 )

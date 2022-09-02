@@ -1,0 +1,85 @@
+[gd_scene load_steps=7 format=2]
+
+[ext_resource path="res://scriptes/PlayerScripts/player.gd" type="Script" id=2]
+[ext_resource path="res://scriptes/PlayerScripts/PlayerTrail.gd" type="Script" id=3]
+[ext_resource path="res://sprites/player.png" type="Texture" id=4]
+[ext_resource path="res://scriptes/PlayerScripts/Laser.gd" type="Script" id=5]
+
+[sub_resource type="CircleShape2D" id=1]
+radius = 5.0
+
+[sub_resource type="Gradient" id=3]
+colors = PoolColorArray( 0.372549, 0.803922, 0.894118, 0, 0.372549, 0.803922, 0.894118, 1 )
+
+[node name="Player" type="KinematicBody2D"]
+z_index = 2
+script = ExtResource( 2 )
+
+[node name="CameraPlayer" type="Camera2D" parent="."]
+offset = Vector2( 0, -60 )
+current = true
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource( 1 )
+
+[node name="player" type="Sprite" parent="."]
+z_index = 2
+texture = ExtResource( 4 )
+
+[node name="Position2D" type="Position2D" parent="."]
+position = Vector2( 3, 0 )
+
+[node name="TrailPosition" type="Position2D" parent="."]
+show_behind_parent = true
+position = Vector2( -3, 0 )
+
+[node name="Trail" type="Line2D" parent="TrailPosition"]
+position = Vector2( 5, 0 )
+width = 3.0
+default_color = Color( 1, 1, 1, 1 )
+gradient = SubResource( 3 )
+script = ExtResource( 3 )
+__meta__ = {
+"_editor_description_": ""
+}
+
+[node name="TrailPosition2" type="Position2D" parent="."]
+show_behind_parent = true
+position = Vector2( -3, -6 )
+
+[node name="Trail" type="Line2D" parent="TrailPosition2"]
+position = Vector2( 5, 0 )
+width = 1.0
+default_color = Color( 1, 1, 1, 1 )
+gradient = SubResource( 3 )
+script = ExtResource( 3 )
+__meta__ = {
+"_editor_description_": ""
+}
+
+[node name="TrailPosition3" type="Position2D" parent="."]
+show_behind_parent = true
+position = Vector2( -3, 6 )
+
+[node name="Trail" type="Line2D" parent="TrailPosition3"]
+position = Vector2( 5, 0 )
+width = 1.0
+default_color = Color( 1, 1, 1, 1 )
+gradient = SubResource( 3 )
+script = ExtResource( 3 )
+__meta__ = {
+"_editor_description_": ""
+}
+
+[node name="Laser" type="RayCast2D" parent="."]
+position = Vector2( 8, 0 )
+rotation = 4.71239
+z_index = 2
+cast_to = Vector2( 0, 240 )
+script = ExtResource( 5 )
+
+[node name="laserLine" type="Line2D" parent="Laser"]
+z_index = 2
+points = PoolVector2Array( 0, 240, 0, 0 )
+width = 0.5
+default_color = Color( 1, 0, 0, 1 )

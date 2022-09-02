@@ -1,0 +1,57 @@
+[gd_scene load_steps=6 format=2]
+
+[ext_resource path="res://scriptes/Wall.gd" type="Script" id=1]
+[ext_resource path="res://sounds/Hit_Hurt10.wav" type="AudioStream" id=2]
+[ext_resource path="res://sprites/Textures/textureCircle.png" type="Texture" id=3]
+
+[sub_resource type="Animation" id=5]
+length = 0.001
+tracks/0/type = "value"
+tracks/0/path = NodePath("Polygon2D:color")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/keys = {
+"times": PoolRealArray( 0 ),
+"transitions": PoolRealArray( 1 ),
+"update": 0,
+"values": [ Color( 1, 1, 1, 1 ) ]
+}
+
+[sub_resource type="Animation" id=3]
+resource_name = "flash"
+length = 0.3
+tracks/0/type = "value"
+tracks/0/path = NodePath("Polygon2D:color")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/keys = {
+"times": PoolRealArray( 0, 0.1, 0.2 ),
+"transitions": PoolRealArray( 1, 1, 1 ),
+"update": 0,
+"values": [ Color( 1, 1, 1, 1 ), Color( 0.372549, 0.803922, 0.894118, 1 ), Color( 1, 1, 1, 1 ) ]
+}
+
+[node name="circleBig" type="StaticBody2D"]
+collision_mask = 3
+script = ExtResource( 1 )
+
+[node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="."]
+polygon = PoolVector2Array( -14, -8, -8, -14, 0, -16, 8, -14, 14, -8, 16, 0, 14, 8, 8, 14, 0, 16, -8, 14, -14, 8, -16, 0 )
+
+[node name="Polygon2D" type="Polygon2D" parent="."]
+texture = ExtResource( 3 )
+texture_offset = Vector2( 16, 16 )
+polygon = PoolVector2Array( -16, 0, -14, -8, -8, -14, 0, -16, 8, -14, 14, -8, 16, 0, 14, 8, 8, 14, 0, 16, -8, 14, -14, 8 )
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+anims/RESET = SubResource( 5 )
+anims/flash = SubResource( 3 )
+
+[node name="AudioStreamPlayer" type="AudioStreamPlayer" parent="."]
+stream = ExtResource( 2 )
+volume_db = -25.0
+bus = "FX"

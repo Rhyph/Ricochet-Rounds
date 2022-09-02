@@ -1,0 +1,346 @@
+[gd_scene load_steps=12 format=2]
+
+[ext_resource path="res://scriptes/UI & util/SkyMainMenu.gd" type="Script" id=1]
+[ext_resource path="res://scriptes/UI & util/Main menu.gd" type="Script" id=2]
+[ext_resource path="res://scenes/UI & util/VolumeSliders.tscn" type="PackedScene" id=4]
+
+[sub_resource type="StyleBoxFlat" id=7]
+bg_color = Color( 0, 0, 0, 1 )
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color( 0.607843, 0.607843, 0.607843, 1 )
+
+[sub_resource type="StyleBoxFlat" id=8]
+bg_color = Color( 0, 0, 0, 1 )
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color( 0.392157, 0.392157, 0.392157, 1 )
+
+[sub_resource type="StyleBoxFlat" id=9]
+bg_color = Color( 0, 0, 0, 1 )
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color( 1, 1, 1, 1 )
+
+[sub_resource type="Shader" id=1]
+code = "shader_type canvas_item;
+
+uniform int octaves = 5;
+uniform vec2 viewport_size = vec2(280.0, 180.0);
+uniform float x_offset = 0.;
+uniform float y_offset = 0.;
+
+varying vec2 vtx;
+
+vec3 mod289(vec3 x)
+{
+	return x - floor(x * (1.0 / 289.0)) * 289.0;
+}
+
+vec2 mod289_2(vec2 x) 
+{
+	return x - floor(x * (1.0 / 289.0)) * 289.0;
+}
+
+vec3 permute(vec3 x) 
+{
+	return mod289(((x*34.0)+1.0)*x);
+}
+
+// Simplex noise 
+// https://github.com/ashima/webgl-noise 
+// Copyright (C) 2011 Ashima Arts. All rights reserved.
+float snoise(vec2 v)
+{
+	const vec4 C = vec4(0.211324865405187,  // (3.0-sqrt(3.0))/6.0
+	                    0.366025403784439,  // 0.5*(sqrt(3.0)-1.0)
+	                    -0.577350269189626,  // -1.0 + 2.0 * C.x
+	                    0.024390243902439); // 1.0 / 41.0
+// First corner
+	vec2 i  = floor(v + dot(v, C.yy) );
+	vec2 x0 = v -   i + dot(i, C.xx);
+
+// Other corners
+	vec2 i1;
+	//i1.x = step( x0.y, x0.x ); // x0.x > x0.y ? 1.0 : 0.0
+	//i1.y = 1.0 - i1.x;
+	i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+	// x0 = x0 - 0.0 + 0.0 * C.xx ;
+	// x1 = x0 - i1 + 1.0 * C.xx ;
+	// x2 = x0 - 1.0 + 2.0 * C.xx ;
+	vec4 x12 = x0.xyxy + C.xxzz;
+	x12.xy -= i1;
+
+// Permutations
+	i = mod289_2(i); // Avoid truncation effects in permutation
+	vec3 p = permute( permute( i.y + vec3(0.0, i1.y, 1.0 ))
+		+ i.x + vec3(0.0, i1.x, 1.0 ));
+
+	vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy), dot(x12.zw,x12.zw)), 0.0);
+	m = m*m ;
+	m = m*m ;
+
+// Gradients: 41 points uniformly over a line, mapped onto a diamond.
+// The ring size 17*17 = 289 is close to a multiple of 41 (41*7 = 287)
+	
+	vec3 x = 2.0 * fract(p * C.www) - 1.0;
+	vec3 h = abs(x) - 0.5;
+	vec3 ox = floor(x + 0.5);
+	vec3 a0 = x - ox;
+	
+	// Normalise gradients implicitly by scaling m
+	// Approximation of: m *= inversesqrt( a0*a0 + h*h );
+	m *= 1.79284291400159 - 0.85373472095314 * ( a0*a0 + h*h );
+	
+	// Compute final noise value at P
+	vec3 g;
+	g.x  = a0.x  * x0.x  + h.x  * x0.y;
+	g.yz = a0.yz * x12.xz + h.yz * x12.yw;
+	return 130.0 * dot(m, g);
+}
+
+vec2 rand2(vec2 p)
+{
+	p = vec2(dot(p, vec2(12.9898,78.233)), dot(p, vec2(26.65125, 83.054543))); 
+	return fract(sin(p) * 43758.5453);
+}
+
+float rand(vec2 p)
+{
+	return fract(sin(dot(p.xy ,vec2(54.90898,18.233))) * 4337.5453);
+}
+
+vec3 hsv2rgb(vec3 c)
+{
+	vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+	vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+	return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+}
+
+// Thanks to David Hoskins https://www.shadertoy.com/view/4djGRh
+float stars(in vec2 x, float numCells, float size, float br)
+{
+	vec2 n = x * numCells;
+	vec2 f = floor(n);
+
+	float d = 1.0e10;
+	for (int i = -1; i <= 1; ++i)
+	{
+		for (int j = -1; j <= 1; ++j)
+		{
+			vec2 g = f + vec2(float(i), float(j));
+			g = n - g - rand2(mod(g, numCells)) + rand(g);
+			// Control size
+			g *= 1. / (numCells * size);
+			d = min(d, dot(g, g));
+		}
+	}
+
+	return br * (smoothstep(.95, 1., (1. - sqrt(d))));
+}
+
+// Simple fractal noise
+// persistence - A multiplier that determines how quickly the amplitudes diminish for 
+// each successive octave.
+// lacunarity - A multiplier that determines how quickly the frequency increases for 
+// each successive octave.
+float fractalNoise(in vec2 coord, in float persistence, in float lacunarity)
+{    
+	float n = 0.;
+	float frequency = 1.;
+	float amplitude = 1.;
+	for (int o = 0; o < octaves; ++o)
+	{
+	    n += amplitude * snoise(coord * frequency);
+	    amplitude *= persistence;
+	    frequency *= lacunarity;
+	}
+	return n;
+}
+
+vec3 fractalNebula(in vec2 coord, vec3 color, float transparency)
+{
+	float n = fractalNoise(coord, .5, 2.);
+	return n * color * transparency;
+}
+
+vec4 mainImage(vec2 fragCoord)
+{
+	float resolution = max(viewport_size.x, viewport_size.y);
+	
+	vec2 coord = fragCoord.xy / resolution;
+	
+	vec3 result = vec3(0.);
+	vec3 nebulaColor1 = hsv2rgb(vec3(.5, 0.5, .25));
+	vec3 nebulaColor2 = hsv2rgb(vec3(.7, 1., .25));
+
+	result += fractalNebula(coord + vec2(.1, .1), nebulaColor1, 1.);
+	result += fractalNebula(coord + vec2(0., .2), nebulaColor2, .5);
+	result += stars(coord, 4., 0.06, 0.6) * vec3(.9, .9, .95);
+	
+	return vec4(result, 1.);
+}
+
+void vertex()
+{
+	vtx = VERTEX + vec2(x_offset, y_offset);
+}
+
+void fragment()
+{
+	COLOR = mainImage(vtx);
+}"
+
+[sub_resource type="ShaderMaterial" id=5]
+shader = SubResource( 1 )
+shader_param/octaves = 5
+shader_param/viewport_size = Vector2( 320, 180 )
+shader_param/x_offset = 0.0
+shader_param/y_offset = 0.0
+
+[sub_resource type="StyleBoxFlat" id=10]
+bg_color = Color( 0, 0, 0, 1 )
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color( 0.607843, 0.607843, 0.607843, 1 )
+
+[sub_resource type="StyleBoxFlat" id=11]
+bg_color = Color( 0, 0, 0, 1 )
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color( 0.392157, 0.392157, 0.392157, 1 )
+
+[sub_resource type="StyleBoxFlat" id=12]
+bg_color = Color( 0, 0, 0, 1 )
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color( 1, 1, 1, 1 )
+
+[node name="Main menu" type="Control"]
+pause_mode = 2
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource( 2 )
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+visible = false
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+margin_left = -27.5
+margin_top = -20.0
+margin_right = 27.5
+margin_bottom = 20.0
+custom_constants/separation = 10
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Start" type="Button" parent="VBoxContainer"]
+margin_right = 55.0
+margin_bottom = 15.0
+focus_mode = 0
+custom_colors/font_color = Color( 1, 1, 1, 1 )
+custom_colors/font_color_hover = Color( 0.607843, 0.607843, 0.607843, 1 )
+custom_colors/font_color_pressed = Color( 0.392157, 0.392157, 0.392157, 1 )
+custom_styles/hover = SubResource( 7 )
+custom_styles/pressed = SubResource( 8 )
+custom_styles/normal = SubResource( 9 )
+enabled_focus_mode = 0
+text = "Start"
+
+[node name="Settings" type="Button" parent="VBoxContainer"]
+margin_top = 25.0
+margin_right = 55.0
+margin_bottom = 40.0
+focus_mode = 0
+custom_colors/font_color = Color( 1, 1, 1, 1 )
+custom_colors/font_color_hover = Color( 0.607843, 0.607843, 0.607843, 1 )
+custom_colors/font_color_pressed = Color( 0.392157, 0.392157, 0.392157, 1 )
+custom_styles/hover = SubResource( 7 )
+custom_styles/pressed = SubResource( 8 )
+custom_styles/normal = SubResource( 9 )
+enabled_focus_mode = 0
+text = "Settings"
+
+[node name="ParallaxBackground" type="ParallaxBackground" parent="."]
+
+[node name="Sky" type="ColorRect" parent="ParallaxBackground"]
+material = SubResource( 5 )
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource( 1 )
+__meta__ = {
+"_edit_lock_": true,
+"_edit_use_anchors_": false
+}
+
+[node name="ColorRect" type="ColorRect" parent="."]
+visible = false
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+margin_left = -37.0
+margin_top = -41.0
+margin_right = 37.0
+margin_bottom = 41.0
+color = Color( 0, 0, 0, 1 )
+__meta__ = {
+"_edit_use_anchors_": false,
+"_editor_description_": ""
+}
+
+[node name="VBoxContainer" type="VBoxContainer" parent="ColorRect"]
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+margin_left = -20.0
+margin_top = -35.5
+margin_right = 20.0
+margin_bottom = 19.5
+custom_constants/separation = 40
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Back" type="Button" parent="ColorRect/VBoxContainer"]
+margin_right = 40.0
+margin_bottom = 15.0
+focus_mode = 0
+custom_colors/font_color = Color( 1, 1, 1, 1 )
+custom_colors/font_color_hover = Color( 0.607843, 0.607843, 0.607843, 1 )
+custom_colors/font_color_pressed = Color( 0.392157, 0.392157, 0.392157, 1 )
+custom_styles/hover = SubResource( 10 )
+custom_styles/pressed = SubResource( 11 )
+custom_styles/normal = SubResource( 12 )
+enabled_focus_mode = 0
+text = "Back"
+
+[node name="VolumeSliders" parent="ColorRect/VBoxContainer" instance=ExtResource( 4 )]
+anchor_right = 0.0
+anchor_bottom = 0.0
+margin_top = 55.0
+margin_right = 40.0
+margin_bottom = 55.0
+
+[connection signal="pressed" from="VBoxContainer/Start" to="." method="_on_Start_pressed"]
+[connection signal="pressed" from="VBoxContainer/Settings" to="." method="_on_Settings_pressed"]
+[connection signal="pressed" from="ColorRect/VBoxContainer/Back" to="." method="_on_Back_pressed"]

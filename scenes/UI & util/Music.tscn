@@ -1,0 +1,59 @@
+[gd_scene load_steps=5 format=2]
+
+[ext_resource path="res://sounds/ES_Press X Twice - Lexica.mp3" type="AudioStream" id=1]
+
+[sub_resource type="GDScript" id=3]
+script/source = "extends AudioStreamPlayer
+
+
+func _physics_process(_delta):
+	if G.musicFade:
+		$AnimationPlayer.play(\"fade\")
+		G.musicFade = false
+"
+
+[sub_resource type="Animation" id=2]
+resource_name = "fade"
+length = 0.6
+tracks/0/type = "value"
+tracks/0/path = NodePath(".:volume_db")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/keys = {
+"times": PoolRealArray( 0, 0.3, 0.6 ),
+"transitions": PoolRealArray( 1, 1, 1 ),
+"update": 0,
+"values": [ -20.0, -70.0, -20.0 ]
+}
+
+[sub_resource type="Animation" id=4]
+resource_name = "ready"
+length = 0.5
+step = 0.05
+tracks/0/type = "value"
+tracks/0/path = NodePath(".:volume_db")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/keys = {
+"times": PoolRealArray( 0.05, 0.5 ),
+"transitions": PoolRealArray( 1, 1 ),
+"update": 0,
+"values": [ -70.0, -20.0 ]
+}
+
+[node name="Music" type="AudioStreamPlayer"]
+pause_mode = 2
+stream = ExtResource( 1 )
+volume_db = -20.0
+autoplay = true
+bus = "Music"
+script = SubResource( 3 )
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+autoplay = "ready"
+anims/fade = SubResource( 2 )
+anims/ready = SubResource( 4 )
